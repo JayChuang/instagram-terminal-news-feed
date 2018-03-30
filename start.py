@@ -1,9 +1,13 @@
+import sys, io
 import argparse
 import getpass
 import json
 import os
 import requests
 from display import display_to_terminal
+
+def set_stdout_encoding_utf8():
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 def get_credential():
     if not os.path.exists('credential.json'):
@@ -100,6 +104,7 @@ def login(credential):
     return session
 
 def main():
+    set_stdout_encoding_utf8()
     parser = argparse.ArgumentParser()
     parser.add_argument('--color', action='store_true', help='Display image with color')
     display_color = parser.parse_args().color
