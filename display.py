@@ -1,6 +1,6 @@
 # Modified from https://github.com/nilesr/braille-art
 
-from PIL import Image
+from PIL import Image, ImageFilter
 from color.img2txt import draw_with_color
 import os, random, sys
 import subprocess
@@ -11,38 +11,41 @@ def img_average(x1, y1, x2, y2, img):
     ret = []
     for x in range(x1, x2):
         for y in range(y1, y2):
-            ret.append(average(img.getpixel((x, y))[:3]))
+            ret.append(img.getpixel((x, y))[0])
     return average(ret)
 
 def convert_index(x):
-    if x <  3: return x
-    if x == 3: return 6
-    if x == 4: return 3
-    if x == 5: return 4
-    if x == 6: return 5
-    if x == 7: return 7
+    if x == 0: return 1
+    if x == 1: return 2
+    if x == 2: return 4
+    if x == 3: return 64
+    if x == 4: return 8
+    if x == 5: return 16
+    if x == 6: return 32
+    if x == 7: return 128
 
 def draw(img_path, post_info):
-    img = Image.open(img_path)
+    img = Image.open(img_path).convert('LA').resize((128, 128), Image.BILINEAR).filter(ImageFilter.CONTOUR)
     start = 0x2800
-    char_width = 10
+    char_width = 2
     char_height = char_width * 2
-    dither, sensitivity = 5, 0.6
+    dither, sensitivity = 5, 0.9*0xFF
     char_width_divided, char_height_divided = round(char_width / 2), round(char_height / 4)
-    match = lambda a, b: a < b if "--invert" in sys.argv else a > b
     print('username: ' + post_info['username'])
     print('\033[4m' + post_info['site_url'] + '\033[0m \n')
+    out = ""
     for y in range(0, img.height - char_height - 1, char_height):
         for x in range(0, img.width - char_width - 1, char_width):
             byte, index = 0x0, 0
             for xn in range(2):
                 for yn in range(4):
                     avg = img_average(x + (char_height_divided * xn), y + (char_width_divided * yn), x + (char_height_divided * (xn + 1)), y + (char_width_divided * (yn + 1)), img)
-                    if match(avg + random.randint(-dither, dither), sensitivity * 0xFF):
-                        byte += 2**convert_index(index)
+                    if (avg) > (sensitivity):
+                        byte += convert_index(index)
                     index += 1
-            print(chr(start + byte), end = "")
-        print()
+            out += chr(start + byte)
+        out += '\n'
+    print(out)
     print('Likes: ' + post_info['likes'])
     print(post_info['caption'])
     print('-------------------\n')
